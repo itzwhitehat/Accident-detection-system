@@ -1,2 +1,1 @@
-# Accident-detection-system
-A standalone accident detection system which was powered by mpu6050, flame sensor to detect accidents and transfer the data over to the Firebase (realtime database).
+The device runs on a basic ESP8266 microcontroller which was paired with a mpu6050 accelerometer for detecting the pitch, roll and yaw to determine whether there is an accident occured or not and a flame sensor which can trigger an alarm if the engine catches fire. Where all this data's are transmitted to the realtime database powered by FIREBASE and can be monitored within the firebase.
