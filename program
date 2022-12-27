@@ -1,0 +1,117 @@
+
+
+////////////////////////////////// DESIGNED AND MODIFIED BY DHINESHD //////////////////////////////////////////
+
+
+
+  #include <ESP8266WiFi.h>
+  #include <FirebaseArduino.h>
+  #include "Wire.h"
+  #include <MPU6050_light.h>
+  
+  #define FIREBASE_HOST "accident-detection-syste-7f05e-default-rtdb.firebaseio.com"  
+  #define FIREBASE_AUTH "pPwjDVYHLJgmhE4rA976vx6xM5W3RrZgNVD0T2FT"  
+  #define WIFI_SSID "accident detection"
+  #define WIFI_PASSWORD "12345678"
+  
+  MPU6050 mpu(Wire);
+  unsigned long timer = 0;
+  // D1&D2: SCL,SDA connections
+  int flame_detected;
+  int flame_sensor = D3;
+  int buzzer = D4;
+
+ void setup() {
+   Serial.begin(9600);
+   pinMode(flame_sensor, INPUT);
+   Wire.begin();
+
+   randomSeed(analogRead(0));
+   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+   Serial.print("connecting");
+   while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
+   Serial.println();
+   Serial.print("connected: ");
+   Serial.println(WiFi.localIP());
+   Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
+   
+   byte status = mpu.begin();
+   Serial.print(F("MPU6050 status: "));
+   Serial.println(status);
+   while (status != 0) { } // stop everything if could not connect to MPU6050
+   Serial.println(F("Calculating offsets, do not move MPU6050"));
+   delay(1000);
+   mpu.calcOffsets(); // gyro and accelero
+   Serial.println("Done!\n"); 
+   pinMode(buzzer, OUTPUT); 
+ 
+ }
+ 
+ void loop()
+ {
+    flame_detected = digitalRead(flame_sensor);
+    Serial.println("Sending_Data");
+    Firebase.setString("Car location","Lat: 11.922686075386862, Lon: 79.62691251882457");
+    mpu.update();
+ if ((millis() - timer) > 10) { // print data every 10ms
+     Serial.print("X : ");
+     Serial.print(mpu.getAngleX());
+     Serial.print("\tY : ");
+     Serial.print(mpu.getAngleY());
+     Serial.print("\tZ : ");
+     Serial.println(mpu.getAngleZ());
+     timer = millis();
+     if( mpu.getAngleX()>25)
+     {
+     Serial.println("car crashed from back");
+     tone(buzzer,4000,5000);
+     Firebase.setString("status","car crashed from back");
+     Firebase.setString("Car location","Lat: 11.922686073567553, Lon: 79.626997535765065");
+     delay(2000);
+     Firebase.setString("status","car was safe"); 
+     ESP.restart();
+     }
+ 
+ else if(mpu.getAngleY()>10)
+     {
+     Serial.println("car crashed from left");
+     tone(buzzer,4000,3000);
+     Firebase.setString("status","car crashed from left"); 
+     Firebase.setString("Car location","Lat: 11.92268875369609, Lon: 79.626999846214571");
+     delay(2000);
+     Firebase.setString("status","car was safe"); 
+     ESP.restart();
+     }
+     
+ else if(mpu.getAngleY()<-10)
+     {
+     Serial.println("car crashed from right");
+     tone(buzzer,4000,3000);
+     Firebase.setString("status","car crashed from right");
+     Firebase.setString("Car location","Lat: 11.922609574246846, Lon: 79.626990953213795");
+     delay(2000);
+     Firebase.setString("status","car was safe"); 
+     ESP.restart();
+     }
+     
+ else if(flame_detected == 0)
+     {
+     Serial.println("Flame detected.");
+     tone(buzzer,4000,3000);
+     Firebase.setString("Engine","Engine caught fire");
+     }
+     
+     
+ else
+     {
+     Serial.println("car was safe");
+     Firebase.setString("Car location","Lat: 11.922686075386862, Lon: 79.62691251882457");
+     Firebase.setString("status","car was safe");
+     Firebase.setString("Engine","Engine was safe");  
+    } 
+    
+   }
+   }
